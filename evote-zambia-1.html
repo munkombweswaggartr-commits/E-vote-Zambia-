@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>e-Vote Zambia — JETS Innovation</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #F2F1E9; }
+  body { font-family: 'Inter', sans-serif; color: #232620; }
+  .evz-focus:focus-visible { outline: 2px solid #1F4D3A; outline-offset: 2px; }
+  .evz-tab { transition: color .15s ease, background-color .15s ease; }
+  .evz-btn { transition: transform .1s ease, box-shadow .15s ease, background-color .15s ease; }
+  .evz-btn:active { transform: translateY(1px); }
+  .evz-card { transition: box-shadow .2s ease; }
+  select, input { font-family: 'Inter', sans-serif; }
+  @media (prefers-reduced-motion: reduce) {
+    .evz-tab, .evz-btn, .evz-card { transition: none !important; }
+  }
+  .evz-overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .evz-candidate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .evz-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .evz-letterhead-inner { display: flex; align-items: center; gap: 14px; }
+  .evz-header-stat { margin-left: auto; text-align: right; }
+  @media (max-width: 640px) {
+    .evz-overview-grid { grid-template-columns: 1fr; }
+    .evz-candidate-grid { grid-template-columns: 1fr; }
+    .evz-stat-grid { grid-template-columns: 1fr 1fr; }
+    .evz-letterhead-inner { flex-wrap: wrap; }
+    .evz-header-stat { margin-left: 0; text-align: left; }
+    .evz-title { font-size: 21px !important; }
+  }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo, useCallback } = React;
+
+/* ---------- tiny inline icon set (no external icon library needed) ---------- */
+function Icon({ name, size = 16, color = "currentColor", strokeWidth = 2, style }) {
+  const common = { fill: "none", stroke: color, strokeWidth, strokeLinecap: "round", strokeLinejoin: "round" };
+  const paths = {
+    landmark: <><path {...common} d="M4 21V10L12 4l8 6v11" /><path {...common} d="M9 21v-6h6v6" /></>,
+    dashboard: <><rect {...common} x="3" y="3" width="7" height="7" rx="1.5" /><rect {...common} x="14" y="3" width="7" height="7" rx="1.5" /><rect {...common} x="3" y="14" width="7" height="7" rx="1.5" /><rect {...common} x="14" y="14" width="7" height="7" rx="1.5" /></>,
+    userPlus: <><circle {...common} cx="9" cy="8" r="4" /><path {...common} d="M2 21v-1a7 7 0 0 1 7-7h0" /><path {...common} d="M19 8v6M16 11h6" /></>,
+    users: <><circle {...common} cx="8" cy="8" r="4" /><path {...common} d="M2 20v-1a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v1" /><circle {...common} cx="17" cy="9" r="3" /><path {...common} d="M23 20v-1a5 5 0 0 0-4-4.9" /></>,
+    vote: <><rect {...common} x="3" y="3" width="18" height="18" rx="2.5" /><path {...common} d="M8 12l3 3 5-6" /></>,
+    link2: <><path {...common} d="M9 17H7a5 5 0 0 1 0-10h2" /><path {...common} d="M15 7h2a5 5 0 0 1 0 10h-2" /><line {...common} x1="8" y1="12" x2="16" y2="12" /></>,
+    barChart3: <><line {...common} x1="6" y1="20" x2="6" y2="10" /><line {...common} x1="12" y1="20" x2="12" y2="4" /><line {...common} x1="18" y1="20" x2="18" y2="14" /></>,
+    shieldCheck: <><path {...common} d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" /><path {...common} d="M9 12l2 2 4-4" /></>,
+    checkCircle: <><circle {...common} cx="12" cy="12" r="10" /><path {...common} d="M8 12l3 3 5-6" /></>,
+    xCircle: <><circle {...common} cx="12" cy="12" r="10" /><line {...common} x1="9" y1="9" x2="15" y2="15" /><line {...common} x1="15" y1="9" x2="9" y2="15" /></>,
+    chevronRight: <polyline {...common} points="9 18 15 12 9 6" />,
+    fingerprint: <><path {...common} d="M12 11a3 3 0 0 1 3 3v1" /><path {...common} d="M12 11a3 3 0 0 0-3 3v2" /><path {...common} d="M8 8a6 6 0 0 1 8 0" /><path {...common} d="M6 6a9 9 0 0 1 12 0" /><line {...common} x1="12" y1="11" x2="12" y2="21" /></>,
+    lock: <><rect {...common} x="5" y="11" width="14" height="9" rx="2" /><path {...common} d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
+    mapPin: <><path {...common} d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" /><circle {...common} cx="12" cy="10" r="2.5" /></>,
+    printer: <><rect {...common} x="6" y="9" width="12" height="7" rx="1" /><path {...common} d="M6 9V4h12v5" /><path {...common} d="M8 16v4h8v-4" /></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" style={style}>{paths[name]}</svg>;
+}
+
+/* ---------- crypto helpers ---------- */
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function shortHash(h) {
+  if (!h) return "";
+  return `${h.slice(0, 6)}…${h.slice(-6)}`;
+}
+function genNRC() {
+  const a = Math.floor(100000 + Math.random() * 900000);
+  const b = Math.floor(10 + Math.random() * 90);
+  const c = Math.floor(Math.random() * 2);
+  return `${a}/${b}/${c}`;
+}
+
+const CANDIDATES = [
+  { id: "c1", name: "Chileshe Mumba", party: "Green Alliance", color: "#1F4D3A", position: "President",
+    manifesto: "Focused on rural electrification and expanding community health posts. Chileshe has served two terms as a district councillor and champions a rolling five-year infrastructure plan funded by copper royalties." },
+  { id: "c2", name: "Bwalya Tembo", party: "Copper Front", color: "#B8622A", position: "President",
+    manifesto: "A mining-sector economist promising to renegotiate export terms and reinvest revenue into vocational training centres for young people leaving school." },
+  { id: "c3", name: "Natasha Chola", party: "Unity Movement", color: "#C99A3B", position: "President",
+    manifesto: "Former teacher running on a platform of free secondary education and a national digital-skills curriculum, arguing STEM access shouldn't depend on which province a child is born in." },
+  { id: "c4", name: "Emmanuel Zulu", party: "Harvest Party", color: "#4C5B76", position: "President",
+    manifesto: "Agricultural cooperative organiser pushing irrigation subsidies and guaranteed minimum prices for maize and soya farmers ahead of the next planting season." },
+];
+
+const STATIONS = [
+  { id: "s1", name: "Lusaka Central Hall" },
+  { id: "s2", name: "Kitwe Community Centre" },
+  { id: "s3", name: "Livingstone Civic Centre" },
+  { id: "s4", name: "Ndola Trade Fair Grounds" },
+];
+
+const GENESIS_PREV = "0".repeat(64);
+
+const TABS = [
+  { id: "overview", label: "Overview", icon: "landmark" },
+  { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+  { id: "register", label: "Register", icon: "userPlus" },
+  { id: "candidates", label: "Candidates", icon: "users" },
+  { id: "vote", label: "Cast Vote", icon: "vote" },
+  { id: "ledger", label: "Ledger", icon: "link2" },
+  { id: "results", label: "Results", icon: "barChart3" },
+];
+
+function App() {
+  const [tab, setTab] = useState("overview");
+  const [voters, setVoters] = useState({});
+  const [chain, setChain] = useState([]);
+  const [regName, setRegName] = useState("");
+  const [regStation, setRegStation] = useState(STATIONS[0].id);
+  const [lastIssuedId, setLastIssuedId] = useState(null);
+  const [selectedVoter, setSelectedVoter] = useState("");
+  const [selectedCandidate, setSelectedCandidate] = useState("");
+  const [castStatus, setCastStatus] = useState(null);
+  const [verifyState, setVerifyState] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const unvotedVoters = useMemo(
+    () => Object.entries(voters).filter(([, v]) => !v.voted),
+    [voters]
+  );
+
+  const tally = useMemo(() => {
+    const counts = Object.fromEntries(CANDIDATES.map((c) => [c.id, 0]));
+    chain.forEach((b) => { if (counts[b.candidateId] !== undefined) counts[b.candidateId] += 1; });
+    return CANDIDATES.map((c) => ({ ...c, votes: counts[c.id] }));
+  }, [chain]);
+
+  const totalVotes = chain.length;
+
+  const stationStats = useMemo(() => {
+    return STATIONS.map((s) => {
+      const registered = Object.values(voters).filter((v) => v.stationId === s.id);
+      const voted = registered.filter((v) => v.voted).length;
+      return { ...s, registered: registered.length, voted, turnout: registered.length ? Math.round((voted / registered.length) * 100) : 0 };
+    });
+  }, [voters]);
+
+  const handleRegister = (e) => {
+    e.preventDefault();
+    if (!regName.trim()) return;
+    const id = genNRC();
+    setVoters((v) => ({ ...v, [id]: { name: regName.trim(), voted: false, stationId: regStation } }));
+    setLastIssuedId(id);
+    setRegName("");
+  };
+
+  const handleCastVote = async (e) => {
+    e.preventDefault();
+    setCastStatus(null);
+    if (!selectedVoter || !selectedCandidate) return;
+    if (voters[selectedVoter]?.voted) {
+      setCastStatus({ ok: false, msg: "This voter ID has already cast a ballot." });
+      return;
+    }
+    setBusy(true);
+    const prevHash = chain.length ? chain[chain.length - 1].hash : GENESIS_PREV;
+    const index = chain.length;
+    const timestamp = Date.now();
+    const voterHash = await sha256(selectedVoter);
+    const payload = `${index}|${prevHash}|${voterHash}|${selectedCandidate}|${timestamp}`;
+    const hash = await sha256(payload);
+    const block = { index, prevHash, voterHash, candidateId: selectedCandidate, timestamp, hash };
+
+    setChain((c) => [...c, block]);
+    setVoters((v) => ({ ...v, [selectedVoter]: { ...v[selectedVoter], voted: true } }));
+    setCastStatus({ ok: true, msg: `Ballot recorded and sealed in block #${index}.` });
+    setSelectedVoter("");
+    setSelectedCandidate("");
+    setBusy(false);
+  };
+
+  const verifyChain = useCallback(async () => {
+    setVerifyState("checking");
+    let prev = GENESIS_PREV;
+    for (const b of chain) {
+      const payload = `${b.index}|${prev}|${b.voterHash}|${b.candidateId}|${b.timestamp}`;
+      const recomputed = await sha256(payload);
+      if (recomputed !== b.hash || b.prevHash !== prev) {
+        setVerifyState({ valid: false, brokenIndex: b.index });
+        return;
+      }
+      prev = b.hash;
+    }
+    setVerifyState({ valid: true, brokenIndex: null });
+  }, [chain]);
+
+  return (
+    <div style={styles.page}>
+      <header className="no-print" style={styles.letterhead}>
+        <div className="evz-letterhead-inner" style={styles.letterheadInner}>
+          <div style={styles.seal}><Icon name="shieldCheck" size={22} color="#F2F1E9" strokeWidth={1.75} /></div>
+          <div>
+            <div style={styles.eyebrow}>National Science Centre · JETS 2026 Innovation</div>
+            <h1 className="evz-title" style={styles.title}>e-Vote Zambia</h1>
+          </div>
+          <div className="evz-header-stat" style={styles.headerStat}>
+            <span style={styles.headerStatNum}>{totalVotes}</span>
+            <span style={styles.headerStatLabel}>ballots sealed</span>
+          </div>
+        </div>
+        <nav style={styles.tabRow}>
+          {TABS.map(({ id, label, icon }) => (
+            <button
+              key={id}
+              className="evz-tab evz-focus"
+              onClick={() => setTab(id)}
+              style={{
+                ...styles.tabBtn,
+                color: tab === id ? "#F2F1E9" : "#B9C4BC",
+                backgroundColor: tab === id ? "#1F4D3A" : "transparent",
+              }}
+            >
+              <Icon name={icon} size={15} /> {label}
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      <main style={styles.main}>
+        {tab === "overview" && <Overview />}
+        {tab === "dashboard" && (
+          <Dashboard voterCount={Object.keys(voters).length} totalVotes={totalVotes} stationStats={stationStats} />
+        )}
+        {tab === "register" && (
+          <RegisterPanel
+            regName={regName} setRegName={setRegName}
+            regStation={regStation} setRegStation={setRegStation}
+            onSubmit={handleRegister} lastIssuedId={lastIssuedId}
+            voterCount={Object.keys(voters).length}
+          />
+        )}
+        {tab === "candidates" && <CandidatesPanel />}
+        {tab === "vote" && (
+          <VotePanel
+            unvotedVoters={unvotedVoters}
+            selectedVoter={selectedVoter} setSelectedVoter={setSelectedVoter}
+            selectedCandidate={selectedCandidate} setSelectedCandidate={setSelectedCandidate}
+            onSubmit={handleCastVote} status={castStatus} busy={busy}
+          />
+        )}
+        {tab === "ledger" && <LedgerPanel chain={chain} verifyState={verifyState} onVerify={verifyChain} />}
+        {tab === "results" && <ResultsPanel tally={tally} totalVotes={totalVotes} />}
+      </main>
+
+      <footer className="no-print" style={styles.footer}>
+        Demo system built for JETS · votes stored in-memory for this session only · candidate names are fictional
+      </footer>
+    </div>
+  );
+}
+
+function Overview() {
+  const steps = [
+    { icon: "userPlus", title: "Register", body: "Each voter is issued a unique NRC-style ID, recorded once against their name." },
+    { icon: "fingerprint", title: "Verify", body: "Casting a ballot checks the ID hasn't voted before — one person, one vote." },
+    { icon: "lock", title: "Seal", body: "Every ballot is hashed together with the previous block, forming a tamper-evident chain." },
+    { icon: "barChart3", title: "Tally", body: "Results update live from the chain itself — nothing is counted by hand." },
+  ];
+  return (
+    <div className="evz-overview-grid">
+      <div style={styles.card}>
+        <p style={styles.kicker}>The problem</p>
+        <h2 style={styles.h2}>Trust is the real ballot box.</h2>
+        <p style={styles.body}>
+          Zambian elections rely on paper trails moved across long distances between polling
+          stations and collation centres — a process vulnerable to delay, error, and dispute.
+          e-Vote Zambia proposes a digital chain of custody: every ballot is cryptographically
+          linked to the one before it, so any alteration after the fact is mathematically detectable.
+        </p>
+      </div>
+      <div style={styles.card}>
+        <p style={styles.kicker}>How it works</p>
+        <div style={styles.stepsList}>
+          {steps.map(({ icon, title, body }, i) => (
+            <div key={title} style={styles.stepRow}>
+              <div style={styles.stepIcon}><Icon name={icon} size={16} color="#1F4D3A" /></div>
+              <div>
+                <div style={styles.stepTitle}>{title}</div>
+                <div style={styles.stepBody}>{body}</div>
+              </div>
+              {i < steps.length - 1 && <Icon name="chevronRight" size={14} color="#C7C2B2" style={styles.stepArrow} />}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ ...styles.card, gridColumn: "1 / -1" }}>
+        <p style={styles.kicker}>Try it</p>
+        <p style={styles.body}>
+          Use the tabs above: register a few voters, cast ballots on their behalf, then open the
+          Ledger tab to see each vote sealed into a hash chain and verify its integrity. Watch the
+          Results tab update live as votes come in.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Dashboard({ voterCount, totalVotes, stationStats }) {
+  const turnoutPct = voterCount ? Math.round((totalVotes / voterCount) * 100) : 0;
+  const stats = [
+    { label: "Registered voters", value: voterCount },
+    { label: "Votes cast", value: totalVotes },
+    { label: "Turnout", value: `${turnoutPct}%` },
+    { label: "Election status", value: "Open" },
+  ];
+  return (
+    <div style={styles.singleCol}>
+      <div className="evz-stat-grid">
+        {stats.map((s) => (
+          <div key={s.label} style={styles.statCard}>
+            <div style={styles.statValue}>{s.value}</div>
+            <div style={styles.statLabel}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={styles.card}>
+        <p style={styles.kicker}>By polling station</p>
+        <h2 style={styles.h2}>Turnout, not tally</h2>
+        <p style={styles.smallNote}>
+          Stations report how many registered voters have voted — never who they voted for.
+          That distinction keeps the ballot secret even at small stations, while still giving
+          officials a live read on turnout.
+        </p>
+        <div style={styles.stationList}>
+          {stationStats.map((s) => (
+            <div key={s.id} style={styles.stationRow}>
+              <div style={styles.stationHead}>
+                <Icon name="mapPin" size={14} color="#B8622A" />
+                <span style={styles.stationName}>{s.name}</span>
+                <span style={styles.stationCount}>{s.voted}/{s.registered} voted</span>
+              </div>
+              <div style={styles.progressTrack}>
+                <div style={{ ...styles.progressFill, width: `${s.turnout}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RegisterPanel({ regName, setRegName, regStation, setRegStation, onSubmit, lastIssuedId, voterCount }) {
+  return (
+    <div style={styles.singleCol}>
+      <div style={styles.card}>
+        <p style={styles.kicker}>Voter roll · {voterCount} registered</p>
+        <h2 style={styles.h2}>Register a voter</h2>
+        <form onSubmit={onSubmit} style={styles.form}>
+          <label style={styles.label} htmlFor="regname">Full name</label>
+          <input id="regname" className="evz-focus" style={styles.input} value={regName}
+            onChange={(e) => setRegName(e.target.value)} placeholder="e.g. Mwansa Kabwe" />
+          <label style={styles.label} htmlFor="regstation">Polling station</label>
+          <select id="regstation" className="evz-focus" style={styles.input} value={regStation}
+            onChange={(e) => setRegStation(e.target.value)}>
+            {STATIONS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <button type="submit" className="evz-btn evz-focus" style={styles.primaryBtn}>
+            <Icon name="userPlus" size={16} color="#F2F1E9" /> Issue voter ID
+          </button>
+        </form>
+        {lastIssuedId && (
+          <div style={styles.stub}>
+            <div style={styles.stubLabel}>Voter ID issued</div>
+            <div style={styles.stubId}>{lastIssuedId}</div>
+            <div style={styles.stubHint}>Give this ID to the voter — it's needed to cast a ballot.</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CandidatesPanel() {
+  return (
+    <div style={styles.singleCol}>
+      {CANDIDATES.map((c) => (
+        <div key={c.id} style={styles.card}>
+          <div style={styles.candidateProfileHead}>
+            <div style={{ ...styles.avatar, backgroundColor: c.color }}>
+              {c.name.split(" ").map((n) => n[0]).join("")}
+            </div>
+            <div>
+              <p style={styles.kicker}>{c.position}</p>
+              <h2 style={{ ...styles.h2, margin: 0 }}>{c.name}</h2>
+              <div style={styles.candidateParty}>{c.party}</div>
+            </div>
+          </div>
+          <p style={{ ...styles.body, marginTop: 14 }}>{c.manifesto}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function VotePanel({ unvotedVoters, selectedVoter, setSelectedVoter, selectedCandidate, setSelectedCandidate, onSubmit, status, busy }) {
+  return (
+    <div style={styles.singleCol}>
+      <div style={styles.card}>
+        <p style={styles.kicker}>{unvotedVoters.length} eligible to vote</p>
+        <h2 style={styles.h2}>Cast a ballot</h2>
+        <p style={styles.smallNote}>
+          In production this step authenticates the voter (national ID / biometric) at a polling
+          station. For this demo, select a registered voter who hasn't voted yet.
+        </p>
+        <form onSubmit={onSubmit} style={styles.form}>
+          <label style={styles.label} htmlFor="voterSelect">Voter</label>
+          <select id="voterSelect" className="evz-focus" style={styles.input} value={selectedVoter}
+            onChange={(e) => setSelectedVoter(e.target.value)}>
+            <option value="">Select a registered voter…</option>
+            {unvotedVoters.map(([id, v]) => <option key={id} value={id}>{v.name} — {id}</option>)}
+          </select>
+
+          <label style={styles.label}>Candidate</label>
+          <div className="evz-candidate-grid">
+            {CANDIDATES.map((c) => (
+              <button type="button" key={c.id} className="evz-btn evz-focus"
+                onClick={() => setSelectedCandidate(c.id)}
+                style={{
+                  ...styles.candidateCard,
+                  borderColor: selectedCandidate === c.id ? c.color : "#D8D3C4",
+                  backgroundColor: selectedCandidate === c.id ? `${c.color}14` : "#FFFFFF",
+                }}>
+                <span style={{ ...styles.candidateDot, backgroundColor: c.color }} />
+                <span>
+                  <div style={styles.candidateName}>{c.name}</div>
+                  <div style={styles.candidateParty}>{c.party}</div>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <button type="submit" className="evz-btn evz-focus"
+            style={{ ...styles.primaryBtn, opacity: !selectedVoter || !selectedCandidate || busy ? 0.5 : 1 }}
+            disabled={!selectedVoter || !selectedCandidate || busy}>
+            <Icon name="vote" size={16} color="#F2F1E9" /> {busy ? "Sealing ballot…" : "Cast ballot"}
+          </button>
+        </form>
+        {status && (
+          <div style={{ ...styles.statusBanner, borderColor: status.ok ? "#1F4D3A" : "#B8622A", color: status.ok ? "#1F4D3A" : "#B8622A" }}>
+            <Icon name={status.ok ? "checkCircle" : "xCircle"} size={16} /> {status.msg}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LedgerPanel({ chain, verifyState, onVerify }) {
+  return (
+    <div style={styles.singleCol}>
+      <div style={styles.card}>
+        <div style={styles.ledgerHeaderRow}>
+          <div>
+            <p style={styles.kicker}>{chain.length} blocks sealed</p>
+            <h2 style={styles.h2}>Chain of custody</h2>
+          </div>
+          <button className="evz-btn evz-focus" style={styles.secondaryBtn} onClick={onVerify} disabled={!chain.length}>
+            <Icon name="shieldCheck" size={16} /> Verify chain integrity
+          </button>
+        </div>
+
+        {verifyState && verifyState !== "checking" && (
+          <div style={{ ...styles.statusBanner, borderColor: verifyState.valid ? "#1F4D3A" : "#B8622A", color: verifyState.valid ? "#1F4D3A" : "#B8622A" }}>
+            <Icon name={verifyState.valid ? "checkCircle" : "xCircle"} size={16} />
+            {verifyState.valid ? "Every block is correctly linked — no tampering detected." : `Chain broken at block #${verifyState.brokenIndex} — recomputed hash doesn't match.`}
+          </div>
+        )}
+        {verifyState === "checking" && <div style={styles.smallNote}>Recomputing hashes…</div>}
+        {chain.length === 0 && <p style={styles.smallNote}>No ballots cast yet. Cast one from the Vote tab to see it sealed here.</p>}
+
+        <div style={styles.chainList}>
+          {chain.slice().reverse().map((b) => {
+            const cand = CANDIDATES.find((c) => c.id === b.candidateId);
+            const broken = verifyState && verifyState !== "checking" && !verifyState.valid && b.index === verifyState.brokenIndex;
+            return (
+              <div key={b.index} className="evz-card" style={{ ...styles.block, borderColor: broken ? "#B8622A" : "#D8D3C4" }}>
+                <div style={{ ...styles.blockSeal, backgroundColor: cand?.color || "#1F4D3A" }}>#{b.index}</div>
+                <div style={styles.blockBody}>
+                  <div style={styles.blockRow}><span style={styles.blockLabel}>Candidate</span><span style={styles.blockValue}>{cand?.name} · {cand?.party}</span></div>
+                  <div style={styles.blockRow}><span style={styles.blockLabel}>Prev hash</span><span style={styles.mono}>{shortHash(b.prevHash)}</span></div>
+                  <div style={styles.blockRow}><span style={styles.blockLabel}>Block hash</span><span style={styles.mono}>{shortHash(b.hash)}</span></div>
+                  <div style={styles.blockRow}><span style={styles.blockLabel}>Sealed</span><span style={styles.blockValue}>{new Date(b.timestamp).toLocaleTimeString()}</span></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResultsPanel({ tally, totalVotes }) {
+  const leader = tally.reduce((a, b) => (b.votes > a.votes ? b : a), tally[0]);
+  const maxVotes = Math.max(...tally.map((t) => t.votes), 1);
+  return (
+    <div style={styles.singleCol}>
+      <div style={styles.card}>
+        <div style={styles.ledgerHeaderRow}>
+          <div>
+            <p style={styles.kicker}>{totalVotes} ballots counted</p>
+            <h2 style={styles.h2}>Live results</h2>
+          </div>
+          {totalVotes > 0 && (
+            <button className="evz-btn evz-focus no-print" style={styles.secondaryBtn} onClick={() => window.print()}>
+              <Icon name="printer" size={16} /> Print results
+            </button>
+          )}
+        </div>
+        {totalVotes === 0 ? (
+          <p style={styles.smallNote}>No ballots yet — results will appear here as votes are cast.</p>
+        ) : (
+          <>
+            <div style={styles.chartWrap}>
+              {tally.map((c) => {
+                const barH = Math.round((c.votes / maxVotes) * 160);
+                return (
+                  <div key={c.id} style={styles.chartCol}>
+                    <div style={styles.chartCount}>{c.votes}</div>
+                    <div style={{ ...styles.chartBar, height: `${Math.max(barH, c.votes > 0 ? 6 : 0)}px`, backgroundColor: c.color }} />
+                    <div style={styles.chartLabel}>{c.party}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={styles.resultsList}>
+              {tally.slice().sort((a, b) => b.votes - a.votes).map((c) => (
+                <div key={c.id} style={styles.resultRow}>
+                  <span style={{ ...styles.candidateDot, backgroundColor: c.color }} />
+                  <span style={styles.resultName}>{c.name} <span style={styles.candidateParty}>· {c.party}</span></span>
+                  <span style={styles.resultVotes}>{c.votes} {c.id === leader.id && totalVotes > 0 ? "★" : ""}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const styles = {
+  page: { minHeight: "100vh", backgroundColor: "#F2F1E9", color: "#232620", fontFamily: "'Inter', sans-serif" },
+  letterhead: { backgroundColor: "#14261F", borderBottom: "3px solid #B8622A" },
+  letterheadInner: { maxWidth: 960, margin: "0 auto", padding: "22px 20px 14px", display: "flex", alignItems: "center", gap: 14 },
+  seal: { width: 40, height: 40, borderRadius: "50%", backgroundColor: "#1F4D3A", border: "1px solid #3A6A54", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  eyebrow: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, letterSpacing: "0.06em", color: "#8FA396", textTransform: "uppercase" },
+  title: { fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 26, color: "#F2F1E9", margin: "2px 0 0" },
+  headerStat: { marginLeft: "auto", textAlign: "right" },
+  headerStatNum: { display: "block", fontFamily: "'Fraunces', serif", fontSize: 24, color: "#F2F1E9", fontWeight: 600 },
+  headerStatLabel: { fontSize: 11, color: "#8FA396", fontFamily: "'IBM Plex Mono', monospace" },
+  tabRow: { maxWidth: 960, margin: "0 auto", padding: "0 20px", display: "flex", gap: 4, overflowX: "auto" },
+  tabBtn: { display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", fontSize: 13.5, fontWeight: 500, border: "none", borderRadius: "8px 8px 0 0", cursor: "pointer", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" },
+  main: { maxWidth: 960, margin: "0 auto", padding: "28px 20px 60px" },
+  singleCol: { display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16 },
+  card: { backgroundColor: "#FFFFFF", border: "1px solid #E2DECE", borderRadius: 12, padding: "24px 26px", boxShadow: "0 1px 2px rgba(20,38,31,0.04)" },
+  kicker: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11.5, letterSpacing: "0.06em", color: "#B8622A", textTransform: "uppercase", margin: "0 0 8px" },
+  h2: { fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, margin: "0 0 12px", color: "#14261F" },
+  body: { fontSize: 14.5, lineHeight: 1.65, color: "#4A4A40", margin: 0 },
+  smallNote: { fontSize: 13, color: "#6E6C5F", lineHeight: 1.6, margin: "0 0 16px" },
+  stepsList: { display: "flex", flexDirection: "column", gap: 14, marginTop: 4 },
+  stepRow: { display: "flex", alignItems: "flex-start", gap: 12, position: "relative" },
+  stepIcon: { width: 30, height: 30, borderRadius: 8, backgroundColor: "#EAE6D6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  stepTitle: { fontWeight: 600, fontSize: 14, color: "#14261F" },
+  stepBody: { fontSize: 13, color: "#6E6C5F", lineHeight: 1.5, marginTop: 2 },
+  stepArrow: { position: "absolute", left: 14, top: 34 },
+  form: { display: "flex", flexDirection: "column", gap: 6, marginTop: 10 },
+  label: { fontSize: 12.5, fontWeight: 600, color: "#4A4A40", marginTop: 6 },
+  input: { padding: "10px 12px", borderRadius: 8, border: "1px solid #D8D3C4", fontSize: 14, backgroundColor: "#FBFAF5", color: "#232620" },
+  primaryBtn: { marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#1F4D3A", color: "#F2F1E9", border: "none", borderRadius: 8, padding: "11px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer" },
+  secondaryBtn: { display: "flex", alignItems: "center", gap: 8, backgroundColor: "#FFFFFF", color: "#1F4D3A", border: "1px solid #1F4D3A", borderRadius: 8, padding: "9px 14px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
+  stub: { marginTop: 18, padding: "16px 18px", borderRadius: 10, border: "1px dashed #B8622A", backgroundColor: "#FBF3EA" },
+  stubLabel: { fontSize: 11.5, textTransform: "uppercase", letterSpacing: "0.05em", color: "#B8622A", fontFamily: "'IBM Plex Mono', monospace" },
+  stubId: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 600, color: "#14261F", margin: "4px 0" },
+  stubHint: { fontSize: 12.5, color: "#8A6A4E" },
+  candidateCard: { display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, border: "1px solid #D8D3C4", cursor: "pointer", textAlign: "left" },
+  candidateDot: { width: 12, height: 12, borderRadius: "50%", flexShrink: 0 },
+  candidateName: { fontSize: 13.5, fontWeight: 600, color: "#232620" },
+  candidateParty: { fontSize: 12, color: "#6E6C5F" },
+  statusBanner: { marginTop: 16, display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", border: "1px solid", borderRadius: 8, fontSize: 13.5, fontWeight: 500, backgroundColor: "#FFFFFF" },
+  ledgerHeaderRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" },
+  chainList: { display: "flex", flexDirection: "column", gap: 10, marginTop: 18 },
+  block: { display: "flex", gap: 14, border: "1px solid #D8D3C4", borderRadius: 10, padding: "14px 16px" },
+  blockSeal: { width: 42, height: 42, borderRadius: "50%", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12.5, fontWeight: 600, flexShrink: 0 },
+  blockBody: { display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 },
+  blockRow: { display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12.5 },
+  blockLabel: { color: "#8A8770", flexShrink: 0 },
+  blockValue: { color: "#232620", fontWeight: 500, textAlign: "right" },
+  mono: { fontFamily: "'IBM Plex Mono', monospace", color: "#232620", fontSize: 12.5, textAlign: "right" },
+  resultsList: { display: "flex", flexDirection: "column", gap: 8, marginTop: 16 },
+  resultRow: { display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, padding: "6px 0", borderBottom: "1px solid #EFECDD" },
+  resultName: { flex: 1, color: "#232620", fontWeight: 500 },
+  resultVotes: { fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, color: "#14261F" },
+  footer: { textAlign: "center", fontSize: 11.5, color: "#8A8770", padding: "0 20px 30px", fontFamily: "'IBM Plex Mono', monospace" },
+  statCard: { backgroundColor: "#FFFFFF", border: "1px solid #E2DECE", borderRadius: 12, padding: "16px 14px", textAlign: "center" },
+  statValue: { fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 600, color: "#14261F" },
+  statLabel: { fontSize: 11.5, color: "#6E6C5F", marginTop: 4 },
+  stationList: { display: "flex", flexDirection: "column", gap: 16, marginTop: 8 },
+  stationRow: { display: "flex", flexDirection: "column", gap: 6 },
+  stationHead: { display: "flex", alignItems: "center", gap: 8, fontSize: 13.5 },
+  stationName: { fontWeight: 600, color: "#232620" },
+  stationCount: { marginLeft: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6E6C5F" },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: "#EFECDD", overflow: "hidden" },
+  progressFill: { height: "100%", backgroundColor: "#1F4D3A", borderRadius: 4 },
+  candidateProfileHead: { display: "flex", alignItems: "center", gap: 14 },
+  avatar: { width: 48, height: 48, borderRadius: "50%", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 600, flexShrink: 0 },
+  chartWrap: { display: "flex", alignItems: "flex-end", gap: 20, height: 220, padding: "20px 4px 0", borderBottom: "1px solid #EFECDD" },
+  chartCol: { display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 6 },
+  chartCount: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 600, color: "#232620" },
+  chartBar: { width: "100%", maxWidth: 56, borderRadius: "6px 6px 0 0", transition: "height .3s ease" },
+  chartLabel: { fontSize: 11, color: "#6E6C5F", textAlign: "center", lineHeight: 1.3 },
+};
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
